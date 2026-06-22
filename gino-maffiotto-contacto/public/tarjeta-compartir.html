@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Tarjeta Gino Maffiotto</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  @page { size: 1080px 1350px; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 1080px;
+    height: 1350px;
+    margin: 0;
+    padding: 0;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: #0a0a0a;
+    -webkit-font-smoothing: antialiased;
+  }
+  .card {
+    position: relative;
+    width: 1080px;
+    height: 1350px;
+    overflow: hidden;
+    color: #ffffff;
+    background:
+      linear-gradient(180deg, rgba(10,10,12,0.75) 0%, rgba(20,12,8,0.82) 50%, rgba(10,10,12,0.92) 100%),
+      url('tarjeta-bg.jpg') center/cover no-repeat;
+  }
+  /* Detalles decorativos */
+  .glow-1 {
+    position: absolute;
+    top: -220px; left: -220px;
+    width: 640px; height: 640px;
+    background: radial-gradient(circle, rgba(249,115,22,0.22) 0%, transparent 65%);
+    filter: blur(50px);
+  }
+  .glow-2 {
+    position: absolute;
+    top: 30%; right: -220px;
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(245,158,11,0.18) 0%, transparent 65%);
+    filter: blur(50px);
+  }
+  .glow-3 {
+    position: absolute;
+    bottom: -180px; left: 25%;
+    width: 560px; height: 560px;
+    background: radial-gradient(circle, rgba(251,146,60,0.15) 0%, transparent 65%);
+    filter: blur(50px);
+  }
+  .grid-overlay {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
+    background-size: 64px 64px;
+    mask-image: radial-gradient(ellipse at center, black 25%, transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse at center, black 25%, transparent 75%);
+  }
+
+  /* Márgenes mucho más pequeños */
+  .content {
+    position: relative;
+    z-index: 2;
+    height: 100%;
+    padding: 36px 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  /* Avatar */
+  .avatar-wrap {
+    position: relative;
+    margin-bottom: 14px;
+  }
+  .avatar-glow {
+    position: absolute;
+    inset: -12px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(249,115,22,0.45), rgba(245,158,11,0.35), rgba(251,146,60,0.35));
+    filter: blur(22px);
+  }
+  .avatar-ring {
+    position: absolute;
+    inset: -5px;
+    border-radius: 50%;
+    background: conic-gradient(from 180deg, #f97316, #f59e0b, #fbbf24, #f97316);
+    padding: 4px;
+  }
+  .avatar {
+    position: relative;
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 5px solid #0a0a0a;
+    background: #1a1a1a;
+  }
+  .avatar img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+  }
+  .badge-online {
+    position: absolute;
+    bottom: 10px; right: 10px;
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: #10b981;
+    border: 4px solid #0a0a0a;
+    z-index: 3;
+  }
+
+  .nombre {
+    font-size: 62px;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    margin-bottom: 6px;
+    line-height: 1;
+    background: linear-gradient(135deg, #ffffff 0%, #fed7aa 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .rol {
+    font-size: 19px;
+    font-weight: 500;
+    color: #fdba74;
+    margin-bottom: 12px;
+    letter-spacing: 0.01em;
+    max-width: 700px;
+  }
+
+  /* Badge verde */
+  .badge-dispo {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    padding: 7px 15px;
+    border-radius: 999px;
+    border: 1px solid rgba(16,185,129,0.4);
+    background: rgba(16,185,129,0.12);
+    color: #34d399;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 20px;
+  }
+  .badge-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #10b981;
+    flex-shrink: 0;
+  }
+
+  /* Layout 2 columnas: texto izquierda, contactos derecha */
+  .layout-dos-columnas {
+    display: grid;
+    grid-template-columns: 1.15fr 1fr;
+    gap: 32px;
+    width: 100%;
+    flex: 1;
+    align-items: center;
+    text-align: left;
+  }
+
+  /* Columna izquierda: bio */
+  .col-bio {
+    text-align: left;
+  }
+  .bio {
+    font-size: 16px;
+    line-height: 1.55;
+    color: #cbd5e1;
+    font-weight: 400;
+    margin-bottom: 12px;
+  }
+  .bio strong {
+    color: #fed7aa;
+    font-weight: 600;
+  }
+  .bio-2 {
+    font-size: 16px;
+    line-height: 1.55;
+    color: #cbd5e1;
+    font-weight: 400;
+  }
+
+  /* Columna derecha: contactos apilados verticalmente */
+  .col-contactos {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .contacto {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(249,115,22,0.2);
+    border-radius: 12px;
+    text-align: left;
+  }
+  .contacto-icon {
+    width: 36px; height: 36px;
+    flex-shrink: 0;
+    border-radius: 9px;
+    background: linear-gradient(135deg, #f97316, #f59e0b);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .contacto-icon svg {
+    width: 18px; height: 18px;
+    color: #ffffff;
+  }
+  .contacto-text {
+    min-width: 0;
+    flex: 1;
+  }
+  .contacto-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #94a3b8;
+    margin-bottom: 1px;
+  }
+  .contacto-value {
+    font-size: 15px;
+    font-weight: 600;
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="glow-1"></div>
+  <div class="glow-2"></div>
+  <div class="glow-3"></div>
+  <div class="grid-overlay"></div>
+
+  <div class="content">
+    <!-- Avatar -->
+    <div class="avatar-wrap">
+      <div class="avatar-glow"></div>
+      <div class="avatar-ring"></div>
+      <div class="avatar">
+        <img src="perfil-gino.png" alt="Gino Maffiotto">
+      </div>
+      <div class="badge-online"></div>
+    </div>
+
+    <!-- Nombre -->
+    <h1 class="nombre">Gino Maffiotto</h1>
+
+    <!-- Rol -->
+    <p class="rol">Ejecutivo Comercial &amp; Presupuestista · Soluciones Metálicas</p>
+
+    <!-- Badge verde -->
+    <div class="badge-dispo">
+      <span class="badge-dot"></span>
+      Disponible para nuevos proyectos y presupuestos
+    </div>
+
+    <!-- Layout 2 columnas: bio + contactos -->
+    <div class="layout-dos-columnas">
+      <!-- Columna izquierda: bio -->
+      <div class="col-bio">
+        <p class="bio">
+          Ejecutivo comercial y presupuestista especializado en soluciones metálicas para la industria y la construcción. <strong>Desarrollo y gestión de proyectos de fabricación y montaje de estructuras metálicas</strong>, con acompañamiento integral desde el diseño hasta la entrega llave en mano. Desarrollo de productos para la industria y el hogar.
+        </p>
+        <p class="bio-2">
+          Acompaño a constructoras, industrias y empresas de servicios y mantenimiento a cumplir sus objetivos con soluciones metálicas personalizadas — ajustadas a presupuesto, plazos exigentes y altos estándares de calidad.
+        </p>
+      </div>
+
+      <!-- Columna derecha: contactos apilados -->
+      <div class="col-contactos">
+        <div class="contacto">
+          <div class="contacto-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z" opacity="0"/><path d="M22 6l-10 7L2 6"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>
+          </div>
+          <div class="contacto-text">
+            <div class="contacto-label">Email</div>
+            <div class="contacto-value">gino@mn.com.uy</div>
+          </div>
+        </div>
+        <div class="contacto">
+          <div class="contacto-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.13.96.37 1.9.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.91.33 1.85.57 2.81.7A2 2 0 0122 16.92z"/></svg>
+          </div>
+          <div class="contacto-text">
+            <div class="contacto-label">Teléfono</div>
+            <div class="contacto-value">+598 93 472 630</div>
+          </div>
+        </div>
+        <div class="contacto">
+          <div class="contacto-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          </div>
+          <div class="contacto-text">
+            <div class="contacto-label">Ubicación</div>
+            <div class="contacto-value">Montevideo, Uruguay</div>
+          </div>
+        </div>
+        <div class="contacto">
+          <div class="contacto-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+          </div>
+          <div class="contacto-text">
+            <div class="contacto-label">Web</div>
+            <div class="contacto-value">montajes2002.com</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
