@@ -15,20 +15,8 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_FILE_SIZE = 8 * 1024 * 1024; // 8 MB
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "contact");
 const ALLOWED_EXT = [
-  ".pdf",
-  ".png",
-  ".jpg",
-  ".jpeg",
-  ".gif",
-  ".webp",
-  ".doc",
-  ".docx",
-  ".xls",
-  ".xlsx",
-  ".dwg",
-  ".dxf",
-  ".zip",
-  ".rar",
+  ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".webp",
+  ".doc", ".docx", ".xls", ".xlsx", ".dwg", ".dxf", ".zip", ".rar",
 ];
 
 function sanitize(value: string, max: number): string {
@@ -78,10 +66,7 @@ export async function POST(request: Request) {
     );
   }
   if (!EMAIL_RE.test(emailLimpio)) {
-    return NextResponse.json(
-      { error: "El email no es válido." },
-      { status: 422 },
-    );
+    return NextResponse.json({ error: "El email no es válido." }, { status: 422 });
   }
   if (mensajeLimpio.length < 5) {
     return NextResponse.json(
@@ -91,8 +76,12 @@ export async function POST(request: Request) {
   }
 
   // Procesar archivo adjunto (opcional)
+  // ⚠️ En Vercel (producción) el filesystem es READ-ONLY, así que no podemos
+  // guardar archivos en disco. Los guardamos solo en desarrollo local.
   let archivoPath: string | null = null;
   let archivoNombre: string | null = null;
+  const isProduction =
+    process.env.NODE_ENV === "production" || !!process.env.VERCEL;
 
   if (archivo && archivo instanceof File && archivo.size > 0) {
     if (archivo.size > MAX_FILE_SIZE) {
@@ -112,21 +101,23 @@ export async function POST(request: Request) {
       );
     }
 
-    try {
-      await mkdir(UPLOAD_DIR, { recursive: true });
-      const safeName = `${randomUUID()}${ext}`;
-      const fullPath = path.join(UPLOAD_DIR, safeName);
-      const buffer = Buffer.from(await archivo.arrayBuffer());
-      await writeFile(fullPath, buffer);
-      // Guardamos la ruta pública relativa para poder accederla luego
-      archivoPath = `/uploads/contact/${safeName}`;
+    // Guardar el archivo SOLO en desarrollo local (Vercel es read-only)
+    if (!isProduction) {
+      try {
+        await mkdir(UPLOAD_DIR, { recursive: true });
+        const safeName = `${randomUUID()}${ext}`;
+        const fullPath = path.join(UPLOAD_DIR, safeName);
+        const buffer = Buffer.from(await archivo.arrayBuffer());
+        await writeFile(fullPath, buffer);
+        archivoPath = `/uploads/contact/${safeName}`;
+        archivoNombre = archivo.name;
+      } catch (err) {
+        console.error("[/api/contact] Error al guardar archivo:", err);
+        archivoNombre = archivo.name;
+      }
+    } else {
+      // En producción (Vercel): no podemos escribir en disco.
       archivoNombre = archivo.name;
-    } catch (err) {
-      console.error("[/api/contact] Error al guardar archivo:", err);
-      return NextResponse.json(
-        { error: "No se pudo guardar el archivo adjunto." },
-        { status: 500 },
-      );
     }
   }
 
@@ -144,11 +135,7 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json(
-      {
-        ok: true,
-        id: registro.id,
-        message: "Mensaje recibido correctamente.",
-      },
+      { ok: true, id: registro.id, message: "Mensaje recibido correctamente." },
       { status: 201 },
     );
   } catch (error) {
@@ -160,7 +147,6 @@ export async function POST(request: Request) {
   }
 }
 
-// Metadatos del endpoint
 export async function GET() {
   return NextResponse.json({
     endpoint: "/api/contact",
