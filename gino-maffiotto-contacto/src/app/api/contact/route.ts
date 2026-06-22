@@ -1,34 +1,53 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
-
-const MAX_NOMBRE = 120;
-const MAX_ASUNTO = 200;
-const MAX_MENSAJE = 5000;
-const MAX_ENLACES = 1000;
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-function sanitize(value: string, max: number): string {
-  return value.trim().slice(0, max);
-}
 
 export async function POST(request: Request) {
   try {
-    let form: FormData;
-    try {
-      form = await request.formData();
-    } catch {
+    // 🔍 DIAGNÓSTICO: ver qué variables están llegando
+    const dbUrl = process.env.DATABASE_URL;
+    const dbToken = process.env.DATABASE_AUTH_TOKEN;
+    const vercelEnv = process.env.VERCEL_ENV;
+    const nodeEnv = process.env.NODE_ENV;
+
+    // Verificar si las variables existen y sus prefijos (sin revelar el valor completo)
+    const diagnostico = {
+      timestamp: new Date().toISOString(),
+      entorno: {
+        VERCEL_ENV: vercelEnv || "(no definido)",
+        NODE_ENV: nodeEnv || "(no definido)",
+      },
+      DATABASE_URL: {
+        definida: typeof dbUrl !== "undefined" && dbUrl !== null && dbUrl !== "",
+        longitud: dbUrl ? dbUrl.length : 0,
+        prefijo: dbUrl ? dbUrl.substring(0, Math.min(20, dbUrl.length)) : "(vacío)",
+        empiezaConLibsql: dbUrl ? dbUrl.startsWith("libsql://") : false,
+      },
+      DATABASE_AUTH_TOKEN: {
+        definida: typeof dbToken !== "undefined" && dbToken !== null && dbToken !== "",
+        longitud: dbToken ? dbToken.length : 0,
+        prefijo: dbToken ? dbToken.substring(0, 10) : "(vacío)",
+      },
+    };
+
+    // Si DATABASE_URL no está definida, devolvemos el diagnóstico
+    if (!dbUrl || dbUrl === "" || dbUrl === "undefined") {
       return NextResponse.json(
-        { error: "Cuerpo inválido (se esperaba multipart/form-data)." },
-        { status: 400 },
+        {
+          error: "DATABASE_URL no está configurada",
+          diagnostico: diagnostico,
+          solucion:
+            "Andá a Vercel → Settings → Environment Variables → agregá DATABASE_URL con tu URL de Turso (empieza con libsql://)",
+        },
+        { status: 500 },
       );
     }
 
+    // Si está definida, intentamos conectar con Prisma
+    const { db } = await import("@/lib/db");
+
+    const form = await request.formData();
     const nombre = String(form.get("nombre") ?? "").trim();
     const email = String(form.get("email") ?? "").trim();
-    const asunto = String(form.get("asunto") ?? "").trim();
     const mensaje = String(form.get("mensaje") ?? "").trim();
-    const enlaces = String(form.get("enlaces") ?? "").trim();
-    const archivo = form.get("archivo");
 
     if (!nombre || !email || !mensaje) {
       return NextResponse.json(
@@ -37,83 +56,18 @@ export async function POST(request: Request) {
       );
     }
 
-    const nombreLimpio = sanitize(nombre, MAX_NOMBRE);
-    const emailLimpio = sanitize(email, 254);
-    const asuntoLimpio = sanitize(asunto, MAX_ASUNTO);
-    const mensajeLimpio = sanitize(mensaje, MAX_MENSAJE);
-    const enlacesLimpio = sanitize(enlaces, MAX_ENLACES);
-
-    if (nombreLimpio.length < 2) {
-      return NextResponse.json(
-        { error: "El nombre debe tener al menos 2 caracteres." },
-        { status: 422 },
-      );
-    }
-    if (!EMAIL_RE.test(emailLimpio)) {
-      return NextResponse.json(
-        { error: "El email no es válido." },
-        { status: 422 },
-      );
-    }
-    if (mensajeLimpio.length < 5) {
-      return NextResponse.json(
-        { error: "El mensaje es demasiado corto." },
-        { status: 422 },
-      );
-    }
-
-    // En Vercel NO guardamos archivos en disco (read-only filesystem)
-    // Solo guardamos el nombre del archivo como referencia
-    let archivoNombre: string | null = null;
-    if (archivo && archivo instanceof File && archivo.size > 0) {
-      archivoNombre = archivo.name;
-    }
-
-    // INTENTAR GUARDAR EN LA BASE DE DATOS
-    // Si falla, devolvemos el error EXACTO para poder diagnosticar
     try {
       const registro = await db.contactMessage.create({
         data: {
-          nombre: nombreLimpio,
-          email: emailLimpio,
-          asunto: asuntoLimpio || "(Sin asunto)",
-          mensaje: mensajeLimpio,
-          enlaces: enlacesLimpio || null,
+          nombre: nombre.slice(0, 120),
+          email: email.slice(0, 254),
+          asunto: String(form.get("asunto") ?? "").slice(0, 200) || "(Sin asunto)",
+          mensaje: mensaje.slice(0, 5000),
+          enlaces: String(form.get("enlaces") ?? "").slice(0, 1000) || null,
           archivoPath: null,
-          archivoNombre: archivoNombre,
+          archivoNombre: null,
         },
       });
 
       return NextResponse.json(
-        { ok: true, id: registro.id, message: "Mensaje recibido." },
-        { status: 201 },
-      );
-    } catch (dbError: any) {
-      // 🔴 DEVOLVEMOS EL ERROR REAL PARA PODER DIAGNOSTICAR
-      console.error("[/api/contact] DB Error:", dbError);
-      const errorMsg = dbError?.message || String(dbError);
-      const errorCode = dbError?.code || "UNKNOWN";
-      return NextResponse.json(
-        {
-          error: `DB Error [${errorCode}]: ${errorMsg}`,
-          stack: dbError?.stack?.split("\n").slice(0, 5).join(" | "),
-        },
-        { status: 500 },
-      );
-    }
-  } catch (outerError: any) {
-    console.error("[/api/contact] Outer error:", outerError);
-    return NextResponse.json(
-      { error: `Error: ${outerError?.message || String(outerError)}` },
-      { status: 500 },
-    );
-  }
-}
-
-export async function GET() {
-  return NextResponse.json({
-    endpoint: "/api/contact",
-    method: "POST (multipart/form-data)",
-    description: "Recibe mensajes del formulario de contacto.",
-  });
-}
+        { ok: true, id: registro.id, message: "Mensaje
