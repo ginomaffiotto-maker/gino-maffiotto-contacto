@@ -1,101 +1,68 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
-
-const MAX_NOMBRE = 120;
-const MAX_ASUNTO = 200;
-const MAX_MENSAJE = 5000;
-const MAX_ENLACES = 1000;
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-function sanitize(value: string, max: number): string {
-  return value.trim().slice(0, max);
-}
 
 export async function POST(request: Request) {
-  let form: FormData;
-  try {
-    form = await request.formData();
-  } catch {
-    return NextResponse.json(
-      { error: "Cuerpo invalido" },
-      { status: 400 },
-    );
-  }
+  const dbUrl = process.env.DATABASE_URL;
+  const dbToken = process.env.DATABASE_AUTH_TOKEN;
 
-  const nombre = String(form.get("nombre") || "").trim();
-  const email = String(form.get("email") || "").trim();
-  const asunto = String(form.get("asunto") || "").trim();
-  const mensaje = String(form.get("mensaje") || "").trim();
-  const enlaces = String(form.get("enlaces") || "").trim();
-  const archivo = form.get("archivo");
+  const info = {
+    DATABASE_URL_existe: !!dbUrl,
+    DATABASE_URL_longitud: dbUrl ? dbUrl.length : 0,
+    DATABASE_URL_prefijo: dbUrl ? dbUrl.substring(0, 15) : "vacio",
+    DATABASE_AUTH_TOKEN_existe: !!dbToken,
+    DATABASE_AUTH_TOKEN_longitud: dbToken ? dbToken.length : 0,
+    VERCEL: process.env.VERCEL,
+    VERCEL_ENV: process.env.VERCEL_ENV,
+    NODE_ENV: process.env.NODE_ENV,
+  };
 
-  if (!nombre || !email || !mensaje) {
+  if (!dbUrl || dbUrl === "undefined" || dbUrl.length < 10) {
     return NextResponse.json(
-      { error: "Faltan campos obligatorios" },
-      { status: 400 },
+      { error: "DATABASE_URL no esta configurada", info: info },
+      { status: 500 },
     );
-  }
-
-  const nombreLimpio = sanitize(nombre, MAX_NOMBRE);
-  const emailLimpio = sanitize(email, 254);
-  const asuntoLimpio = sanitize(asunto, MAX_ASUNTO);
-  const mensajeLimpio = sanitize(mensaje, MAX_MENSAJE);
-  const enlacesLimpio = sanitize(enlaces, MAX_ENLACES);
-
-  if (nombreLimpio.length < 2) {
-    return NextResponse.json(
-      { error: "Nombre muy corto" },
-      { status: 422 },
-    );
-  }
-  if (!EMAIL_RE.test(emailLimpio)) {
-    return NextResponse.json(
-      { error: "Email invalido" },
-      { status: 422 },
-    );
-  }
-  if (mensajeLimpio.length < 5) {
-    return NextResponse.json(
-      { error: "Mensaje muy corto" },
-      { status: 422 },
-    );
-  }
-
-  let archivoNombre: string | null = null;
-  if (archivo && archivo instanceof File && archivo.size > 0) {
-    archivoNombre = archivo.name;
   }
 
   try {
+    const { db } = await import("@/lib/db");
+    const form = await request.formData();
+    const nombre = String(form.get("nombre") || "").trim();
+    const email = String(form.get("email") || "").trim();
+    const mensaje = String(form.get("mensaje") || "").trim();
+
+    if (!nombre || !email || !mensaje) {
+      return NextResponse.json(
+        { error: "Faltan campos", info: info },
+        { status: 400 },
+      );
+    }
+
     const registro = await db.contactMessage.create({
       data: {
-        nombre: nombreLimpio,
-        email: emailLimpio,
-        asunto: asuntoLimpio || "Sin asunto",
-        mensaje: mensajeLimpio,
-        enlaces: enlacesLimpio || null,
+        nombre: nombre.slice(0, 120),
+        email: email.slice(0, 254),
+        asunto: String(form.get("asunto") || "").slice(0, 200) || "Sin asunto",
+        mensaje: mensaje.slice(0, 5000),
+        enlaces: String(form.get("enlaces") || "").slice(0, 1000) || null,
         archivoPath: null,
-        archivoNombre: archivoNombre,
+        archivoNombre: null,
       },
     });
 
     return NextResponse.json(
-      { ok: true, id: registro.id, message: "Mensaje recibido correctamente" },
+      { ok: true, id: registro.id },
       { status: 201 },
     );
-  } catch (dbError: any) {
-    console.error("Error al guardar:", dbError);
-    const codigo = dbError?.code || "UNKNOWN";
-    const mensajeError = dbError?.message || String(dbError);
+  } catch (e: any) {
     return NextResponse.json(
-      {
-        error: "Error DB " + codigo + ": " + mensajeError,
-      },
+      { error: e?.message || String(e), info: info },
       { status: 500 },
     );
   }
 }
 
 export async function GET() {
-  return NextResponse.json({ status: "ok", endpoint: "/api/contact" });
+  return NextResponse.json({
+    status: "ok",
+    DATABASE_URL_existe: !!process.env.DATABASE_URL,
+  });
 }
